@@ -24,7 +24,7 @@ device_id = credentials["device_id"]
 def add_msg(seq, payload, dict):
     if seq in dict and dict[seq] != payload:
         # Si el numero de secuencia ya existe y tiene asignado otro payload
-        add_msg(seq + 1, payload, dict)
+        add_msg(seq * 10, payload, dict)
     else:
         dict[seq] = payload
 
@@ -41,6 +41,7 @@ while True:
         add_msg(elem["seqNumber"], payload, data)
     print(data)
     data_json.update(data)
+    data_json = {k: v for k, v in sorted(data_json.items(), key=lambda x: x[1])}
     with open('experiments_test.json', 'w') as json_file:
         json.dump(data_json,json_file,indent=2)
     time.sleep(2000)
