@@ -4,6 +4,7 @@
 import requests
 import time
 import json
+import random
 
 from utils.casting import hex_to_bytes
 
@@ -23,8 +24,11 @@ device_id = credentials["device_id"]
 
 def add_msg(seq, payload, dict):
     if seq in dict and dict[seq] != payload:
+        if seq == 0:
+            new_seq = random.randint(4097,40970)
+            add_msg(new_seq, payload, dict)
         # Si el numero de secuencia ya existe y tiene asignado otro payload
-        add_msg(seq * 10, payload, dict)
+        else: add_msg(seq * 10, payload, dict)
     else:
         dict[seq] = payload
 
