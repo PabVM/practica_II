@@ -58,5 +58,50 @@ c = mean + std
 
 print(f'Change-of-state constant C: {c}')
 
+lossy_trace = []
+error_free_trace = []
 
+"""
+Ahora corresponde crear la traza de perdida
 
+Para esto, crearemos una subrutina que extraiga los estados de error
+y los concatene en lossy_trace
+
+En este caso creo que no deberia ser relevante el obtener la traza libre de errores,
+pero la vamos a sacar igual
+
+"""
+# Necesito un contador de ceros
+def zero_counter(trc,index):
+    i = index
+    count = 0
+    while trc[i] == 0:
+        count += 1
+        i += 1
+    return count, i
+
+# TO-DO: hacer esto mas eficiente
+def find_lossy_trace(trc,index):
+    i = index
+    # Mientras leemos 1's o la cantidad de ceros es menor a la constante de cambio de estado,
+    # nos encontramos en un estado de perdida
+    while trc[i] == 1 or zero_counter(trc,i) < c:
+        i += 1
+    print(f'Lossy state found: {trc[index:i]}')
+    return trc[index:i], i
+    
+ind = 0
+while ind < trace.size:
+    z_count, new_ind = zero_counter(trace,ind)
+    if trace[ind] == 0 and z_count > c:
+        error_free_trace.append(trace[ind:new_ind])
+        print(f'Error-free state found: {trace[ind:new_ind]}')
+        ind = new_ind
+        continue
+
+    if trace[ind] == 1: 
+        lossy_state, new_ind = find_lossy_trace(trace,ind)
+        lossy_trace.append(lossy_state)
+        ind = new_ind
+
+print(f'Lossy trace: {lossy_trace}')
