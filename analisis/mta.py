@@ -1,10 +1,12 @@
 import numpy as np
 import json
+import math
+import matplotlib.pyplot as plt
 
 """
 Primero tenemos que crear la traza de los mensajes
 """
-with open("experiments_test.json", "r") as file:
+with open("experiments_test2.json", "r") as file:
     ex = json.load(file)
 
 # Pasamos los mensajes del payload a un arreglo para iterar y crear la traza
@@ -32,19 +34,19 @@ loss_lengths = []
 Se recorre el arreglo correspondiente a la traza y cada vez que pille un 1,
 inicializar un contador, dejar que corra hasta encontrar un cero y luego hacerle append a loss_lenghts
 """
-def count_loss(trc,index):
+def count_loss(trc,index,lengths):
     i = index
     count = 0
-    while trc[i] == 1:
+    while trc[i] == 1 and i < trc.size-1:
         count += 1
         i += 1
-    loss_lengths.append(count)
+    lengths.append(count)
     return i
 
 ind = 0
 while ind < trace.size:
     if trace[ind] == 1:
-        ind = count_loss(trace,ind)
+        ind = count_loss(trace,ind,loss_lengths)
     else: ind +=1
 
 mean = np.mean(loss_lengths)
@@ -114,3 +116,32 @@ while start < trace.size-1 and end < trace.size-1:
 
 print(f'Lossy trace: {lossy_trace}')
 print(f'Error free trace: {error_free_trace}')
+
+def runs_test(trc):
+    window_size = 50
+    print(f'Lossy trace length: {trc.size}')
+    partitions = math.floor((trc.size)/window_size)
+    print(f'Number of partitions: {partitions}')
+    trc_partitioned = np.array_split(trc,partitions)
+    runs = np.array([])
+    for prtn in trc_partitioned:
+        i = 0
+        sub_runs = []
+        while i < prtn.size-1:
+            if prtn[i] == 1:
+                i = count_loss(prtn,i,sub_runs)
+            else: i += 1
+        runs = np.concatenate((runs,np.array(sub_runs)))
+    median = np.median(runs)
+    runs_above = np.where(runs > median)
+    print(f'Number of runs above median: {runs_above[0].size}')
+    runs_below = np.where(runs < median)
+    print(f'Number of runs below median: {runs_below[0].size}')
+    # TO-DO: ver bien qué es lo que se tiene que histogramear
+    #plt.hist(runs,bins=10)
+    #plt.show()
+    
+runs_test(lossy_trace)
+
+def get_conditional_entropy(trc, order):
+    pass
