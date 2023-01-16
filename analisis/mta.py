@@ -7,7 +7,6 @@ Primero tenemos que crear la traza de los mensajes
 with open("experiments_test.json", "r") as file:
     ex = json.load(file)
 
-
 # Pasamos los mensajes del payload a un arreglo para iterar y crear la traza
 iterable = (p for p in ex.values())
 payloads = np.sort(np.fromiter(iterable, int))
@@ -80,30 +79,34 @@ def zero_counter(trc,index):
         i += 1
     return count, i
 
-# TO-DO: hacer esto mas eficiente
-def find_lossy_trace(trc,index):
-    i = index
-    # Mientras leemos 1's o la cantidad de ceros es menor a la constante de cambio de estado,
-    # nos encontramos en un estado de perdida
-    print(f'Elemento a evaluar: {trc[i]}')
-    while trc[i] == 1:
-        i += 1
-    print(f'Lossy state found: {trc[index:i]}')
-    return trc[index:i], i
-    
-ind = 0
-print(f'Tamaño de la traza: {trace.size}')
-while ind < trace.size:
-    z_count, new_ind = zero_counter(trace,ind)
-    print(f'Nuevo indice: {new_ind}')
-    #print(f'Contador de ceros: {z_count}')
-    if z_count > c:
-        error_free_trace.append(trace[ind:new_ind])
-        print(f'Error-free state found: {trace[ind:new_ind]}')
+# ¿En qué momentos hay que contar ceros?
+# A: Cuando en la traza pillo un 1 y luego un 0
+# Voy a necesitar dos índices para indicar el inicio y el fin del segmento
+# Entonces puedo avanzar hasta encontrar un 1, guardar ese índice de inicio, seguir hasta encontrar un cero y contar
+# Si la cantidad de 0's es menor a C, se actualiza el índice de fin de segmento y se sigue iterando
+# Si la cantidad de 0's es mayor o igual a C, se deja el índice de fin de segmento como estaba y se agrega el segmento a lossy_trace
 
-    elif trace[ind] == 1: 
-        lossy_state, new_ind = find_lossy_trace(trace,ind)
-        lossy_trace.append(lossy_state)
-    ind = new_ind
+def find_lossy_trace(trc, start):
+    e_index = start
+    while trc[e_index] == 1:
+        e_index += 1
+    z_count, new_e_index= zero_counter(trc,e_index)
+    if z_count < c:
+        # Si hay una cantidad de 0's menor a c, se deben comenzar a contar nuevamente los 1's siguientes
+        e_index = find_lossy_trace(trc,new_e_index)
+    return e_index
+
+start = 0
+end = 0
+while end < trace.size:
+    while trace[start] == 0:
+        start += 1
+    print(f'Lossy state begins at: {start}')
+    end = find_lossy_trace(trace,start)
+    print(f'Lossy state ends at: {end}')
+    lossy_state = trace[start:end]
+    print(f'Lossy state found: {lossy_state}')
+    lossy_trace.append(lossy_state)
+    start = end
 
 print(f'Lossy trace: {lossy_trace}')
