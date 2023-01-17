@@ -2,6 +2,7 @@ import numpy as np
 import json
 import math
 import matplotlib.pyplot as plt
+from itertools import permutations
 
 """
 Primero tenemos que crear la traza de los mensajes
@@ -144,4 +145,43 @@ def runs_test(trc):
 runs_test(lossy_trace)
 
 def get_conditional_entropy(trc, order):
-    pass
+    # Primero, particionamos la traza para poder hacer las búsquedas necesarias
+    trc_splitted = np.array_split(trc,order)
+    # Calculamos todas las posibles permutaciones del largo del orden
+    perm = permutations([0,1], order)
+    n_partitions = math.floor((trc.size)/order)
+    # Y procedemos a contar las ocurrencias
+    oc = {}
+    for element in perm:
+        count = trc_splitted.count(element)
+        oc[element] = count
+    first_sum = (np.sum(oc.values()))/n_partitions
+    # Ahora debemos contar, por una parte, las ocurrencias de cada elemento de perm seguidas por un 1
+    # y por otro lado las ocurrencias seguidas por un 0
+    second_sum_0_arr = np.array([])
+    second_sum_1_arr = np.array([])
+    for element in perm:
+        followed_by_1 = 0
+        followed_by_0 = 0
+        # Obtenemos los índices de las ocurrencias de cada combinación
+        indxs = np.where(trc == element)[0]
+        # Luego, por cada elemento vamos revisando el primer bit de el elemento que le sigue y lo vamos guardando
+        for index in indxs:
+            if trc_splitted[index+1][0] == 1:
+                followed_by_1 += 1
+            else: 
+                followed_by_0 +=1
+        # Ahora que tenemos la cantidad de ocurrencias del elemento seguidas por un 1 y por un 0, calculamos los factores de la suma
+        fact_1_0 = followed_by_0/(oc[element])
+        fact_2_0 = np.log2(fact_1_0)
+        second_sum_0_arr = np.append(second_sum_0_arr,(fact_1_0*fact_2_0))
+
+        fact_1_1 = followed_by_1/(oc[element])
+        fact_2_1 = np.log2(fact_1_1)
+        second_sum_1_arr = np.append(second_sum_1_arr,(fact_1_1*fact_2_1))
+
+    second_sum_0 = np.sum(second_sum_0_arr)
+    second_sum_1 = np.sum(second_sum_1_arr)
+    second_sum = second_sum_0 + second_sum_1
+
+    return -(first_sum*second_sum)
