@@ -2,12 +2,12 @@ import numpy as np
 import json
 import math
 import matplotlib.pyplot as plt
-from itertools import permutations
+from itertools import product, permutations
 
 """
 Primero tenemos que crear la traza de los mensajes
 """
-with open("experiments_test2.json", "r") as file:
+with open("experiments_test.json", "r") as file:
     ex = json.load(file)
 
 # Pasamos los mensajes del payload a un arreglo para iterar y crear la traza
@@ -108,10 +108,10 @@ while start < trace.size-1 and end < trace.size-1:
                 continue
             else: 
                 lossy_state = trace[start:end]
-                print(f'Lossy state begins at: {start}')
-                print(f'Lossy state ends at: {end}')
+                #print(f'Lossy state begins at: {start}')
+                #print(f'Lossy state ends at: {end}')
                 lossy_trace = np.concatenate((lossy_trace, np.array(lossy_state)))
-                print(f'Lossy state found: {lossy_state}')
+                #print(f'Lossy state found: {lossy_state}')
                 end += count
                 start = end
 
@@ -139,49 +139,96 @@ def runs_test(trc):
     runs_below = np.where(runs < median)
     print(f'Number of runs below median: {runs_below[0].size}')
     # TO-DO: ver bien qué es lo que se tiene que histogramear
-    #plt.hist(runs,bins=10)
-    #plt.show()
+    plt.hist(runs,bins=10)
+    plt.show()
     
 runs_test(lossy_trace)
 
+def count_appearances(subtrc,spltd_trc):
+    count = 0
+    for element in spltd_trc:
+        if np.array_equal(subtrc,element):
+            count += 1
+    return count
+
+def values_to_list(dict):
+    l = np.array([],dtype=int)
+    for v in dict.values():
+        l = np.append(l,int(v))
+    return l
+
+def get_indexes(trc,element):
+    indexes = np.array([],dtype=int)
+    i = 0
+    while i < len(trc):
+        if np.array_equal(trc[i],element):
+            indexes = np.append(indexes,i)
+        i += 1
+    return indexes
+
+def count_appearances_followed_by(num,trc_spltd,permutation):
+    count = 0
+    indxs = get_indexes(trc_spltd,permutation)
+    # Vamos recorriendo el arreglo de índices y revisando el primer número del elemento siguiente
+    i = 0
+    while i < indxs.size and indxs[i] < len(trc_spltd) - 1:
+        index = indxs[i]
+        if trc_spltd[index+1][0] == num:
+            count += 1
+        i += 1
+    return count
+
 def get_conditional_entropy(trc, order):
-    # Primero, particionamos la traza para poder hacer las búsquedas necesarias
-    trc_splitted = np.array_split(trc,order)
-    # Calculamos todas las posibles permutaciones del largo del orden
-    perm = permutations([0,1], order)
     n_partitions = math.floor((trc.size)/order)
+    # Primero, particionamos la traza para poder hacer las búsquedas necesarias
+    trc_splitted = np.array_split(trc,n_partitions)
+    # Calculamos todas las posibles permutaciones del largo del orden
+    perm = list(product([0,1], repeat=order))
+    print(f'Possible permutations: {perm}')
     # Y procedemos a contar las ocurrencias
-    oc = {}
+    appearances = {}
+    
+    # Por cada permutación, contamos el número de ocurrencias y lo guardamos en un diccionarios
     for element in perm:
-        count = trc_splitted.count(element)
-        oc[element] = count
-    first_sum = (np.sum(oc.values()))/n_partitions
-    # Ahora debemos contar, por una parte, las ocurrencias de cada elemento de perm seguidas por un 1
-    # y por otro lado las ocurrencias seguidas por un 0
-    second_sum_0_arr = np.array([])
-    second_sum_1_arr = np.array([])
-    for element in perm:
-        followed_by_1 = 0
-        followed_by_0 = 0
-        # Obtenemos los índices de las ocurrencias de cada combinación
-        indxs = np.where(trc == element)[0]
-        # Luego, por cada elemento vamos revisando el primer bit de el elemento que le sigue y lo vamos guardando
-        for index in indxs:
-            if trc_splitted[index+1][0] == 1:
-                followed_by_1 += 1
-            else: 
-                followed_by_0 +=1
-        # Ahora que tenemos la cantidad de ocurrencias del elemento seguidas por un 1 y por un 0, calculamos los factores de la suma
-        fact_1_0 = followed_by_0/(oc[element])
-        fact_2_0 = np.log2(fact_1_0)
-        second_sum_0_arr = np.append(second_sum_0_arr,(fact_1_0*fact_2_0))
+        count = count_appearances(element,trc_splitted)
+        appearances[element] = count
+    
+    # Ahora debemos buscar las ocurrencias de cada elemento de las permutaciones (que aparezcan)
+    # para definir los factores de la segunda suma
+    # Es decir:
+    num_of_ap_fllwd_by_0 = {}
+    num_of_ap_fllwd_by_1 = {}
 
-        fact_1_1 = followed_by_1/(oc[element])
-        fact_2_1 = np.log2(fact_1_1)
-        second_sum_1_arr = np.append(second_sum_1_arr,(fact_1_1*fact_2_1))
+    sum_0_arr = np.array([])
+    sum_1_arr = np.array([])
 
-    second_sum_0 = np.sum(second_sum_0_arr)
-    second_sum_1 = np.sum(second_sum_1_arr)
-    second_sum = second_sum_0 + second_sum_1
+    for k,v in appearances.items():
+        if v != 0:
+            num_of_ap_fllwd_by_0[k] = count_appearances_followed_by(0,trc_splitted,k)
+            num_of_ap_fllwd_by_1[k] = count_appearances_followed_by(1,trc_splitted,k)
 
-    return -(first_sum*second_sum)
+            first_factor_fllwd_by_0 = num_of_ap_fllwd_by_0[k]/n_partitions
+            second_factor_fllwd_by_0 = np.log2(num_of_ap_fllwd_by_0[k]/v) if num_of_ap_fllwd_by_0[k] != 0 else 0
+            sum_0_arr = np.append(sum_0_arr, (first_factor_fllwd_by_0*second_factor_fllwd_by_0))
+
+
+            first_factor_fllwd_by_1 = num_of_ap_fllwd_by_1[k]/n_partitions
+            second_factor_fllwd_by_1 = np.log2(num_of_ap_fllwd_by_1[k]/v) if num_of_ap_fllwd_by_1[k] != 0 else 0
+            sum_1_arr = np.append(sum_1_arr,(first_factor_fllwd_by_1*second_factor_fllwd_by_1))
+    
+    sum_0 = np.sum(sum_0_arr)
+    sum_1 = np.sum(sum_1_arr)
+
+    return -(sum_0+sum_1)
+
+    
+
+# Luego de esto, debemos calcular la entropía para distintos órdenes (vamos a tomar un máximo de 6 porque 2**6 estados como máximo suena razonable)
+entropies = {}
+order = 1
+while order < 6:
+    print(f'Current order:{order}')
+    entropies[order] = get_conditional_entropy(lossy_trace,order)
+    order += 1
+
+print(f'Entropies: {entropies}')
