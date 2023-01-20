@@ -2,12 +2,12 @@ import numpy as np
 import json
 import math
 import matplotlib.pyplot as plt
-from itertools import product, permutations
+from itertools import product
 
 """
 Primero tenemos que crear la traza de los mensajes
 """
-with open("generated_data.json", "r") as file:
+with open("experiments1.json", "r") as file:
     ex = json.load(file)
 
 # Pasamos los mensajes del payload a un arreglo para iterar y crear la traza
@@ -42,12 +42,12 @@ def count_loss(trc,index,lengths):
         count += 1
         i += 1
     lengths.append(count)
-    return i
+    return i, lengths
 
 ind = 0
 while ind < trace.size:
     if trace[ind] == 1:
-        ind = count_loss(trace,ind,loss_lengths)
+        ind, loss_lenghts = count_loss(trace,ind,loss_lengths)
     else: ind +=1
 
 mean = np.mean(loss_lengths)
@@ -126,25 +126,45 @@ def runs_test(trc):
     print(f'Number of partitions: {partitions}')
     # Se divide la traza en partes iguales
     trc_partitioned = np.array_split(trc,partitions)
+
     runs = np.array([])
     for prtn in trc_partitioned:
         i = 0
         sub_runs = []
         while i < prtn.size-1:
             if prtn[i] == 1:
-                i = count_loss(prtn,i,sub_runs)
+                i, sub_runs = count_loss(prtn,i,sub_runs)
             else: i += 1
         runs = np.concatenate((runs,np.array(sub_runs)))
+    
     median = np.median(runs)
     runs_above = np.where(runs > median)
     print(f'Number of runs above median: {runs_above[0].size}')
     runs_below = np.where(runs < median)
     print(f'Number of runs below median: {runs_below[0].size}')
-    # TO-DO: ver bien qué es lo que se tiene que histogramear
-    plt.hist(runs,bins=10)
+
+    # Calcular dónde están el percentil 5 y el 95 para chequear la estacionariedad
+    print(f'Number of runs: {runs.size}')
+    cut_off_5 = np.max(runs) * 0.05
+    cut_off_95 = np.max(runs) * 0.95
+
+    runs_above_per_95 = np.where(runs > cut_off_95)
+    runs_below_per_5 = np.where(runs < cut_off_5)
+    print(f'Number of runs below 0.05 cut-off: {runs_below_per_5[0].size}')
+    print(f'Number of runs above 0.95 cut-off: {runs_above_per_95[0].size}')
+
+    per_of_runs_out_cut_offs = (runs_above_per_95[0].size + runs_below_per_5[0].size)*runs[0].size/100
+    print(f'Percentage of runs out the cut-offs: {per_of_runs_out_cut_offs}')
+
+    plt.hist(runs,bins=15)
+    plt.ylabel('Frequencies')
+    plt.xlabel('Number of runs')
+    plt.axvline(x=cut_off_5)
+    plt.axvline(x=cut_off_95)
     plt.show()
     
 runs_test(lossy_trace)
+
 
 def count_appearances(subtrc,spltd_trc):
     count = 0
@@ -221,9 +241,10 @@ def get_conditional_entropy(trc, order):
     sum_0 = np.sum(sum_0_arr)
     sum_1 = np.sum(sum_1_arr)
 
+    # TO-DO: Revisar con casos en los que pueda saber la entropia condicional desde antes (arreglo de puros 1's)
     return -(sum_0+sum_1)
 
-    
+
 
 # Luego de esto, debemos calcular la entropía para distintos órdenes (vamos a tomar un máximo de 6 porque 2**6 estados como máximo suena razonable)
 entropies = {}
