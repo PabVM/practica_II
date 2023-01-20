@@ -7,7 +7,7 @@ from itertools import product, permutations
 """
 Primero tenemos que crear la traza de los mensajes
 """
-with open("experiments_test.json", "r") as file:
+with open("generated_data.json", "r") as file:
     ex = json.load(file)
 
 # Pasamos los mensajes del payload a un arreglo para iterar y crear la traza
@@ -119,10 +119,12 @@ print(f'Lossy trace: {lossy_trace}')
 print(f'Error free trace: {error_free_trace}')
 
 def runs_test(trc):
+    # Elegimos el tamaño en que vamos a particionar el arreglo para que sea en partes iguales
     window_size = 50
     print(f'Lossy trace length: {trc.size}')
     partitions = math.floor((trc.size)/window_size)
     print(f'Number of partitions: {partitions}')
+    # Se divide la traza en partes iguales
     trc_partitioned = np.array_split(trc,partitions)
     runs = np.array([])
     for prtn in trc_partitioned:
