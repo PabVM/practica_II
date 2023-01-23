@@ -8,7 +8,7 @@ from tabulate import tabulate
 """
 Primero tenemos que crear la traza de los mensajes
 """
-with open("experiments2.json", "r") as file:
+with open("experiments1.json", "r") as file:
     ex = json.load(file)
 
 # Pasamos los mensajes del payload a un arreglo para iterar y crear la traza
@@ -62,7 +62,7 @@ c = mean + std
 print(f'Change-of-state constant C: {c}')
 
 lossy_trace = np.array([])
-error_free_trace = []
+error_free_lengths = []
 
 """
 Ahora corresponde crear la traza de perdida
@@ -93,9 +93,10 @@ start = 0
 end = 0
 while start < trace.size-1 and end < trace.size-1:
     if trace[start] == 0 and start == end:
-        error_free_trace.append(trace[start])
-        start += 1
-        end += 1
+        count = zero_counter(trace,start)
+        error_free_lengths.append(count)
+        start += count
+        end += count
         continue
     elif trace[start] == 1:
         # Actualizo end
@@ -108,6 +109,7 @@ while start < trace.size-1 and end < trace.size-1:
                 end += count
                 continue
             else: 
+                error_free_lengths.append(count)
                 lossy_state = trace[start:end]
                 #print(f'Lossy state begins at: {start}')
                 #print(f'Lossy state ends at: {end}')
@@ -117,7 +119,12 @@ while start < trace.size-1 and end < trace.size-1:
                 start = end
 
 print(f'Lossy trace: {lossy_trace}')
-print(f'Error free trace: {error_free_trace}')
+plt.hist(error_free_lengths,bins=25)
+plt.title('Lengths of error-free segments')
+plt.ylabel('Frequency')
+plt.xlabel('Error-free lengths')
+plt.grid(True)
+plt.show()
 
 def runs_test(trc):
     # Elegimos el tamaño en que vamos a particionar el arreglo para que sea en partes iguales
@@ -250,7 +257,7 @@ def get_conditional_entropy(trc, order):
 # Luego de esto, debemos calcular la entropía para distintos órdenes (vamos a tomar un máximo de 6 porque 2**6 estados como máximo suena razonable)
 entropies = {}
 order = 1
-while order < 7:
+while order < 11:
     entropies[order] = get_conditional_entropy(lossy_trace,order)
     order += 1
 
@@ -283,7 +290,7 @@ def get_dtmc(trc, order):
     dtmc_total[order] = dtmc
 
 order = 1
-while order < 7:
+while order < 11:
     get_dtmc(lossy_trace,order)
     order += 1
 
