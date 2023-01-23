@@ -3,11 +3,12 @@ import json
 import math
 import matplotlib.pyplot as plt
 from itertools import product
+from tabulate import tabulate
 
 """
 Primero tenemos que crear la traza de los mensajes
 """
-with open("experiments1.json", "r") as file:
+with open("experiments2.json", "r") as file:
     ex = json.load(file)
 
 # Pasamos los mensajes del payload a un arreglo para iterar y crear la traza
@@ -200,13 +201,13 @@ def count_appearances_followed_by(num,trc_spltd,permutation):
         i += 1
     return count
 
+
 def get_conditional_entropy(trc, order):
     n_partitions = math.floor((trc.size)/order)
     # Primero, particionamos la traza para poder hacer las búsquedas necesarias
     trc_splitted = np.array_split(trc,n_partitions)
     # Calculamos todas las posibles permutaciones del largo del orden
     perm = list(product([0,1], repeat=order))
-    print(f'Possible permutations: {perm}')
     # Y procedemos a contar las ocurrencias
     appearances = {}
     
@@ -249,9 +250,46 @@ def get_conditional_entropy(trc, order):
 # Luego de esto, debemos calcular la entropía para distintos órdenes (vamos a tomar un máximo de 6 porque 2**6 estados como máximo suena razonable)
 entropies = {}
 order = 1
-while order < 6:
-    print(f'Current order:{order}')
+while order < 7:
     entropies[order] = get_conditional_entropy(lossy_trace,order)
     order += 1
 
 print(f'Entropies: {entropies}')
+
+plt.plot(entropies.keys(),entropies.values(),'bo')
+plt.xlabel('Order')
+plt.ylabel('Entropy')
+plt.show()
+
+dtmc_total = {}
+
+def get_dtmc(trc, order):
+    dtmc = []
+    pbb = {}
+    pbb_fllwd_by_0 = {}
+    pbb_fllwd_by_1 = {}
+    n_partitions = math.floor((trc.size)/order)
+    trc_splitted = np.array_split(trc,n_partitions)
+    perm = list(product([0,1], repeat=order))
+
+    for element in perm:
+        count = count_appearances(element,trc_splitted)
+        if count > 0:
+            pbb[element] = count/n_partitions
+            pbb_fllwd_by_0[element] = count_appearances_followed_by(0,trc_splitted,element)/count
+            pbb_fllwd_by_1[element] = count_appearances_followed_by(1,trc_splitted,element)/count
+            probabilities = [element, pbb[element], pbb_fllwd_by_0[element], pbb_fllwd_by_1[element]]
+            dtmc.append(probabilities)
+    dtmc_total[order] = dtmc
+
+order = 1
+while order < 7:
+    get_dtmc(lossy_trace,order)
+    order += 1
+
+with open('dtmc_tables.txt','w') as tables:
+    for k,v in dtmc_total.items():
+        # Por cada matriz asociada a cada orden, hay que tabular
+        col_names = ['State', 'P(i)', 'P(0|i)', 'P(1|i)']
+        table = f'Order: {k} \n {tabulate(v,headers=col_names,tablefmt="grid")}\n'
+        tables.write(table)
