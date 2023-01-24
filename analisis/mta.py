@@ -61,6 +61,13 @@ c = mean + std
 
 print(f'Change-of-state constant C: {c}')
 
+plt.hist(loss_lenghts,bins=25)
+plt.title('Lengths of lossy segments')
+plt.ylabel('Frequency')
+plt.xlabel('Loss lengths')
+plt.grid(True)
+plt.show()
+
 lossy_trace = np.array([])
 error_free_lengths = []
 
@@ -126,6 +133,7 @@ plt.xlabel('Error-free lengths')
 plt.grid(True)
 plt.show()
 
+
 def runs_test(trc):
     # Elegimos el tamaño en que vamos a particionar el arreglo para que sea en partes iguales
     window_size = 50
@@ -165,10 +173,12 @@ def runs_test(trc):
     print(f'Percentage of runs out the cut-offs: {per_of_runs_out_cut_offs}')
 
     plt.hist(runs,bins=15)
+    plt.title('Runs test results')
     plt.ylabel('Frequencies')
     plt.xlabel('Number of runs')
     plt.axvline(x=cut_off_5)
     plt.axvline(x=cut_off_95)
+    plt.grid(True)
     plt.show()
     
 runs_test(lossy_trace)
@@ -264,8 +274,10 @@ while order < 11:
 print(f'Entropies: {entropies}')
 
 plt.plot(entropies.keys(),entropies.values(),'bo')
+plt.title('Conditional entropy per order')
 plt.xlabel('Order')
 plt.ylabel('Entropy')
+plt.grid(True)
 plt.show()
 
 dtmc_total = {}
