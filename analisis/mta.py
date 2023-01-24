@@ -61,15 +61,9 @@ c = mean + std
 
 print(f'Change-of-state constant C: {c}')
 
-plt.hist(loss_lenghts,bins=25)
-plt.title('Lengths of lossy segments')
-plt.ylabel('Frequency')
-plt.xlabel('Loss lengths')
-plt.grid(True)
-plt.show()
-
 lossy_trace = np.array([])
 error_free_lengths = []
+lossy_state_lengths = []
 
 """
 Ahora corresponde crear la traza de perdida
@@ -118,6 +112,7 @@ while start < trace.size-1 and end < trace.size-1:
             else: 
                 error_free_lengths.append(count)
                 lossy_state = trace[start:end]
+                lossy_state_lengths.append(lossy_state.size)
                 #print(f'Lossy state begins at: {start}')
                 #print(f'Lossy state ends at: {end}')
                 lossy_trace = np.concatenate((lossy_trace, np.array(lossy_state)))
@@ -130,6 +125,13 @@ plt.hist(error_free_lengths,bins=25)
 plt.title('Lengths of error-free segments')
 plt.ylabel('Frequency')
 plt.xlabel('Error-free lengths')
+plt.grid(True)
+plt.show()
+
+plt.hist(lossy_state_lengths,bins=25)
+plt.title('Lengths of lossy segments')
+plt.ylabel('Frequency')
+plt.xlabel('Loss lengths')
 plt.grid(True)
 plt.show()
 
