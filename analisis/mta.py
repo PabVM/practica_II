@@ -4,26 +4,32 @@ import math
 import matplotlib.pyplot as plt
 from itertools import product
 from tabulate import tabulate
+from scipy import stats as st
+
+# TO-DO: documentar y readme
+# TO-DO: buscar si es que hay alguna actualización de este trabajo
 
 """
 Primero tenemos que crear la traza de los mensajes
 """
-with open("experiments1.json", "r") as file:
+with open("experiments2.json", "r") as file:
     ex = json.load(file)
+    print(f'SHOWING RESULTS FOR DATA SET: {file.name} \n')
 
 # Pasamos los mensajes del payload a un arreglo para iterar y crear la traza
 iterable = (p for p in ex.values())
 payloads = np.sort(np.fromiter(iterable, int))
-print(payloads)
+print('-------- GENERAL INFORMATION -------- \n')
+print(f'Number of received messages: {payloads.size}')
 expected = np.arange(start=payloads[0],stop=payloads[payloads.size-1]+1,dtype=int)
-print(expected)
+print(f'Number of expected messages: {expected.size}')
+print(f'Loss rate: {(expected.size - payloads.size)/payloads.size}')
 # La traza debe ser del tamanno del total de mensajes enviados
 trace = np.zeros(expected.size, dtype=int)
 
 for i in range(0,expected.size):
     if expected[i] not in payloads:
         trace[i] = 1
-print(trace)
 
 """
 Vamos a dejar un arreglo de contadores 
@@ -59,7 +65,7 @@ print(f'Standard deviation: {std}')
 
 c = mean + std
 
-print(f'Change-of-state constant C: {c}')
+print(f'Change-of-state constant C: {c} \n')
 
 lossy_trace = np.array([])
 error_free_lengths = []
@@ -120,7 +126,12 @@ while start < trace.size-1 and end < trace.size-1:
                 end += count
                 start = end
 
-print(f'Lossy trace: {lossy_trace}')
+print('-------- ERROR-FREE TRACE INFORMATION -------- \n')
+print(f'Minimum error-free length: {np.min(error_free_lengths)}')
+print(f'Maximum error-free length: {np.max(error_free_lengths)}')
+print(f'Mean: {np.mean(error_free_lengths)}')
+print(f'Mode: {st.mode(error_free_lengths,axis=0,keepdims=False)}')
+print(f'Median: {np.median(error_free_lengths)}\n')
 plt.hist(error_free_lengths,bins=25)
 plt.title('Lengths of error-free segments')
 plt.ylabel('Frequency')
@@ -128,6 +139,13 @@ plt.xlabel('Error-free lengths')
 plt.grid(True)
 plt.show()
 
+print('-------- LOSSY TRACE INFORMATION -------- \n')
+print(f'Lossy trace length: {lossy_trace.size}')
+print(f'Minimum loss state length: {np.min(lossy_state_lengths)}')
+print(f'Maximum loss state length: {np.max(lossy_state_lengths)}')
+print(f'Mean: {np.mean(lossy_state_lengths)}')
+print(f'Mode: {st.mode(lossy_state_lengths,axis=0,keepdims=False)}')
+print(f'Median: {np.median(lossy_state_lengths)} \n')
 plt.hist(lossy_state_lengths,bins=25)
 plt.title('Lengths of lossy segments')
 plt.ylabel('Frequency')
@@ -137,9 +155,9 @@ plt.show()
 
 
 def runs_test(trc):
+    print('-------- RUNS TEST INFORMATION -------- \n')
     # Elegimos el tamaño en que vamos a particionar el arreglo para que sea en partes iguales
     window_size = 50
-    print(f'Lossy trace length: {trc.size}')
     partitions = math.floor((trc.size)/window_size)
     print(f'Number of partitions: {partitions}')
     # Se divide la traza en partes iguales
@@ -159,7 +177,7 @@ def runs_test(trc):
     runs_above = np.where(runs > median)
     print(f'Number of runs above median: {runs_above[0].size}')
     runs_below = np.where(runs < median)
-    print(f'Number of runs below median: {runs_below[0].size}')
+    print(f'Number of runs below median: {runs_below[0].size} \n')
 
     # Calcular dónde están el percentil 5 y el 95 para chequear la estacionariedad
     print(f'Number of runs: {runs.size}')
@@ -172,7 +190,13 @@ def runs_test(trc):
     print(f'Number of runs above 0.95 cut-off: {runs_above_per_95[0].size}')
 
     per_of_runs_out_cut_offs = (runs_above_per_95[0].size + runs_below_per_5[0].size)*runs[0].size/100
-    print(f'Percentage of runs out the cut-offs: {per_of_runs_out_cut_offs}')
+    print(f'Percentage of runs out the cut-offs: {per_of_runs_out_cut_offs} \n')
+
+    print(f'Maximum value: {np.max(runs)}')
+    print(f'Minimum value: {np.min(runs)}')
+    print(f'Mean: {np.mean(runs)}')
+    print(f'Mode: {st.mode(runs,axis=0,keepdims=False)}')
+    print(f'Median: {np.median(runs)} \n')
 
     plt.hist(runs,bins=15)
     plt.title('Runs test results')
@@ -273,13 +297,15 @@ while order < 11:
     entropies[order] = get_conditional_entropy(lossy_trace,order)
     order += 1
 
+print('-------- ENTROPY AND DTMC INFORMATION -------- \n')
 print(f'Entropies: {entropies}')
 
-plt.plot(entropies.keys(),entropies.values(),'bo')
+plt.plot(entropies.values(),entropies.keys(),'bo')
 plt.title('Conditional entropy per order')
-plt.xlabel('Order')
-plt.ylabel('Entropy')
+plt.xlabel('Entropy')
+plt.ylabel('Order')
 plt.grid(True)
+plt.xlim(-0.1,1.1)
 plt.show()
 
 dtmc_total = {}
