@@ -9,22 +9,21 @@ from scipy import stats as st
 # TO-DO: documentar y readme
 # TO-DO: buscar si es que hay alguna actualización de este trabajo
 
-"""
-Primero tenemos que crear la traza de los mensajes
-"""
 with open("experiments2.json", "r") as file:
     ex = json.load(file)
     print(f'SHOWING RESULTS FOR DATA SET: {file.name} \n')
 
-# Pasamos los mensajes del payload a un arreglo para iterar y crear la traza
+# Convert the data to an array to create the trace
 iterable = (p for p in ex.values())
 payloads = np.sort(np.fromiter(iterable, int))
 print('-------- GENERAL INFORMATION -------- \n')
 print(f'Number of received messages: {payloads.size}')
+
+# To create the trace, we compare the messages that should have arrived with those that actually arrived
 expected = np.arange(start=payloads[0],stop=payloads[payloads.size-1]+1,dtype=int)
 print(f'Number of expected messages: {expected.size}')
 print(f'Loss rate: {(expected.size - payloads.size)/payloads.size}')
-# La traza debe ser del tamanno del total de mensajes enviados
+# The trace must be the same size as the total number of sent messages
 trace = np.zeros(expected.size, dtype=int)
 
 for i in range(0,expected.size):
@@ -32,15 +31,15 @@ for i in range(0,expected.size):
         trace[i] = 1
 
 """
-Vamos a dejar un arreglo de contadores 
-por cada vez que nos encontremos con un 1 en la traza de perdida
+We create an array of counters for each time we find a loss in the trace
 """
 
 loss_lengths = []
 
 """
-Se recorre el arreglo correspondiente a la traza y cada vez que pille un 1,
-inicializar un contador, dejar que corra hasta encontrar un cero y luego hacerle append a loss_lenghts
+We go through the trace and each time we find a loss, 
+a counter is initialized and grows until a successfully received message is found.
+Then, we append the counter to loss_lengths
 """
 def count_loss(trc,index,lengths):
     i = index
@@ -57,12 +56,18 @@ while ind < trace.size:
         ind, loss_lenghts = count_loss(trace,ind,loss_lengths)
     else: ind +=1
 
+"""
+Calculate the mean and standard deviation of the losses lengths in the trace
+"""
 mean = np.mean(loss_lengths)
 std = np.std(loss_lengths)
 
 print(f'Loss lengths mean: {mean}')
 print(f'Standard deviation: {std}')
 
+"""
+Calculate the change-of-state constant C as the mean + standard deviation of the losses lengths
+"""
 c = mean + std
 
 print(f'Change-of-state constant C: {c} \n')
@@ -72,16 +77,13 @@ error_free_lengths = []
 lossy_state_lengths = []
 
 """
-Ahora corresponde crear la traza de perdida
+Now it is time to create the lossy trace
 
-Para esto, crearemos una subrutina que extraiga los estados de error
-y los concatene en lossy_trace
-
-En este caso creo que no deberia ser relevante el obtener la traza libre de errores,
-pero la vamos a sacar igual
-
+For this, we will create a subroutine that extracts the loss states
+and concatenates them in lossy_trace
 """
-# Necesito un contador de ceros
+
+# This function counts the number of consecutive zeros in a given trace
 def zero_counter(trc,index):
     count = 0
     while trc[index] == 0 and index < trc.size-1:
@@ -89,12 +91,19 @@ def zero_counter(trc,index):
         index += 1
     return count
 
-# ¿En qué momentos hay que contar ceros?
-# A: Cuando en la traza pillo un 1 y luego un 0
-# Voy a necesitar dos índices para indicar el inicio y el fin del segmento
-# Entonces puedo avanzar hasta encontrar un 1, guardar ese índice de inicio, seguir hasta encontrar un cero y contar
-# Si la cantidad de 0's es menor a C, se actualiza el índice de fin de segmento y se sigue iterando
-# Si la cantidad de 0's es mayor o igual a C, se deja el índice de fin de segmento como estaba y se agrega el segmento a lossy_trace
+
+"""
+The following code creates the lossy trace as follows:
+
+1.- Initialized two indices to delimit the start and end of a segment in the trace
+2.- Both indices are increased until a loss is found
+3.- Then, only the "end" index is increased until a zero is found and we proceed to count 
+the number of following zeros
+4.- If the number of zeros is less than C, the end-of-segment index is updated and we continue iterating
+5.- If the number of zeros is greater than C, the segment trace[start:end] is added to lossy_trace
+
+We will also create the error-free trace to compare the lengths of the lossy and error-free states
+"""
 
 start = 0
 end = 0
@@ -106,12 +115,12 @@ while start < trace.size-1 and end < trace.size-1:
         end += count
         continue
     elif trace[start] == 1:
-        # Actualizo end
+        # Updates end
         end += 1
-        # Si me topo con un cero, empiezo a contar
+        # If we find a zero, start to count
         if trace[end] == 0:
             count = zero_counter(trace,end)
-            # Si la cantidad de 0's consecutivos es mayor a C, se corre start
+            # If the number if consecutive zeros is greater than C, start index is updated
             if count < c:
                 end += count
                 continue
@@ -119,13 +128,11 @@ while start < trace.size-1 and end < trace.size-1:
                 error_free_lengths.append(count)
                 lossy_state = trace[start:end]
                 lossy_state_lengths.append(lossy_state.size)
-                #print(f'Lossy state begins at: {start}')
-                #print(f'Lossy state ends at: {end}')
                 lossy_trace = np.concatenate((lossy_trace, np.array(lossy_state)))
-                #print(f'Lossy state found: {lossy_state}')
                 end += count
                 start = end
 
+# Prints information and graphs about the error-free and lossy traces
 print('-------- ERROR-FREE TRACE INFORMATION -------- \n')
 print(f'Minimum error-free length: {np.min(error_free_lengths)}')
 print(f'Maximum error-free length: {np.max(error_free_lengths)}')
@@ -153,14 +160,29 @@ plt.xlabel('Loss lengths')
 plt.grid(True)
 plt.show()
 
+"""
+The runs test is to test the stationarity of a given trace.
+In this case, we will prove that the lossy trace is stationary (and therefore it could be
+modeled with a Discrete-Time Markov Chain or DTMC)
 
+The test is summarized as follows:
+
+1.- Define a run as a number of consecutive ones (error burst)
+2.- Divide the trace into segments of equal lengths
+3.- Compute the lengths of runs in each segment
+4.- Count the number of runs of length above and below the median value for run lengths in the trace
+5.- Plot a histogram for the number of runs
+
+For a stationary trace, the number of runs distribution between 0.05 and 0.95 cut-offs
+will be close to 90 percents.
+"""
 def runs_test(trc):
     print('-------- RUNS TEST INFORMATION -------- \n')
-    # Elegimos el tamaño en que vamos a particionar el arreglo para que sea en partes iguales
+    # We choose the size in which the trace is going to be partitioned
     window_size = 50
     partitions = math.floor((trc.size)/window_size)
     print(f'Number of partitions: {partitions}')
-    # Se divide la traza en partes iguales
+    # The trace is divided into equal parts
     trc_partitioned = np.array_split(trc,partitions)
 
     runs = np.array([])
@@ -179,7 +201,6 @@ def runs_test(trc):
     runs_below = np.where(runs < median)
     print(f'Number of runs below median: {runs_below[0].size} \n')
 
-    # Calcular dónde están el percentil 5 y el 95 para chequear la estacionariedad
     print(f'Number of runs: {runs.size}')
     cut_off_5 = np.max(runs) * 0.05
     cut_off_95 = np.max(runs) * 0.95
@@ -207,9 +228,12 @@ def runs_test(trc):
     plt.grid(True)
     plt.show()
     
+# Apply the runs test to lossy trace
 runs_test(lossy_trace)
 
+# -------- Helper functions --------
 
+# This function counts the appearances of a given segment in a trace
 def count_appearances(subtrc,spltd_trc):
     count = 0
     for element in spltd_trc:
@@ -217,12 +241,14 @@ def count_appearances(subtrc,spltd_trc):
             count += 1
     return count
 
+# Converts dict values to a list
 def values_to_list(dict):
     l = np.array([],dtype=int)
     for v in dict.values():
         l = np.append(l,int(v))
     return l
 
+# Returns the indexes at which a given element appears
 def get_indexes(trc,element):
     indexes = np.array([],dtype=int)
     i = 0
@@ -232,6 +258,7 @@ def get_indexes(trc,element):
         i += 1
     return indexes
 
+# Counts the appareances of a segment followed by a given element
 def count_appearances_followed_by(num,trc_spltd,permutation):
     count = 0
     indxs = get_indexes(trc_spltd,permutation)
@@ -244,17 +271,24 @@ def count_appearances_followed_by(num,trc_spltd,permutation):
         i += 1
     return count
 
+# --------------------------------
 
+"""
+The conditional entropy is an indication of the randomness of the next element of a trace, given the past history.
+It is calculated by the sum of the frequency of the different possible segment appearances given an order for the Markov Chain states.
+With the conditional entropy for different orders, we can choose the order with minimum entropy and acceptable complexity level for the DTMC.
+
+* A conditional entropy value close to 1 means that the next element in the trace is less predictable from its previous states
+"""
 def get_conditional_entropy(trc, order):
     n_partitions = math.floor((trc.size)/order)
-    # Primero, particionamos la traza para poder hacer las búsquedas necesarias
+    # Partition the trace to be able to carry out the necessary searches
     trc_splitted = np.array_split(trc,n_partitions)
-    # Calculamos todas las posibles permutaciones del largo del orden
+    # Calculate all the possible permutations of length equal to the order
     perm = list(product([0,1], repeat=order))
-    # Y procedemos a contar las ocurrencias
+    # Count the appearances
     appearances = {}
     
-    # Por cada permutación, contamos el número de ocurrencias y lo guardamos en un diccionarios
     for element in perm:
         count = count_appearances(element,trc_splitted)
         appearances[element] = count
