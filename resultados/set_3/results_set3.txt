@@ -1,0 +1,48 @@
+SHOWING RESULTS FOR DATA SET: experiments3.json 
+
+-------- GENERAL INFORMATION -------- 
+
+Number of received messages: 3777
+Number of expected messages: 4074
+Loss lengths mean: 1.1165413533834587
+Standard deviation: 0.3848015700200529
+Loss rate: 0.07290132547864507
+Change-of-state constant C: 1.5013429234035116 
+
+-------- ERROR-FREE TRACE INFORMATION -------- 
+
+Minimum error-free length: 2
+Maximum error-free length: 125
+Mean: 15.620833333333334
+Mode: ModeResult(mode=3, count=28)
+Median: 8.0
+
+-------- LOSSY TRACE INFORMATION -------- 
+
+Lossy trace length: 324
+Minimum loss state length: 1
+Maximum loss state length: 9
+Mean: 1.3556485355648535
+Mode: ModeResult(mode=1, count=203)
+Median: 1.0 
+
+-------- RUNS TEST INFORMATION -------- 
+
+Number of partitions: 6
+Number of runs above median: 15
+Number of runs below median: 11 
+
+Number of runs: 31
+Number of runs below 0.05 cut-off: 9
+Number of runs above 0.95 cut-off: 1
+Percentage of runs out the cut-offs: 0.1 
+
+Maximum value: 52.0
+Minimum value: 1.0
+Mean: 9.419354838709678
+Mode: ModeResult(mode=1.0, count=5)
+Median: 4.0 
+
+-------- ENTROPY AND DTMC INFORMATION -------- 
+
+Entropies: {1: 0.4068923508360529, 2: 0.4000614267942325, 3: 0.2999766457396428, 4: 0.4114361547492953, 5: 0.2617506391638181, 6: 0.17444285885197902, 7: 0.35173947505200753, 8: 0.3325940630949539, 9: 0.05555555555555555, 10: 0.03656015629507227}

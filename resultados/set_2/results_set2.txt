@@ -4,9 +4,9 @@ SHOWING RESULTS FOR DATA SET: experiments2.json
 
 Number of received messages: 12569
 Number of expected messages: 15249
-Loss rate: 0.21322300899037314
 Loss lengths mean: 1.3273897969291728
 Standard deviation: 0.9380502431414112
+Loss rate: 0.17574922945766935
 Change-of-state constant C: 2.265440040070584 
 
 -------- ERROR-FREE TRACE INFORMATION -------- 

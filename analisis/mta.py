@@ -5,11 +5,14 @@ import matplotlib.pyplot as plt
 from itertools import product
 from tabulate import tabulate
 from scipy import stats as st
+import sys
 
-# TO-DO: documentar y readme
+# TO-DO: documentar y readme con instrucciones de ejecución de los experimentos
 # TO-DO: buscar si es que hay alguna actualización de este trabajo
 
-with open("experiments2.json", "r") as file:
+file_name = sys.argv[1]
+
+with open(file_name, "r") as file:
     ex = json.load(file)
     print(f'SHOWING RESULTS FOR DATA SET: {file.name} \n')
 
@@ -22,7 +25,6 @@ print(f'Number of received messages: {payloads.size}')
 # To create the trace, we compare the messages that should have arrived with those that actually arrived
 expected = np.arange(start=payloads[0],stop=payloads[payloads.size-1]+1,dtype=int)
 print(f'Number of expected messages: {expected.size}')
-print(f'Loss rate: {(expected.size - payloads.size)/payloads.size}')
 # The trace must be the same size as the total number of sent messages
 trace = np.zeros(expected.size, dtype=int)
 
@@ -47,23 +49,29 @@ def count_loss(trc,index,lengths):
     while trc[i] == 1 and i < trc.size-1:
         count += 1
         i += 1
+    #print(f'Loss count: {count}')
     lengths.append(count)
     return i, lengths
 
-ind = 0
-while ind < trace.size:
-    if trace[ind] == 1:
-        ind, loss_lenghts = count_loss(trace,ind,loss_lengths)
-    else: ind +=1
+def lengths_for_losses(trc,lossy_lengths):
+    ind = 0
+    while ind < trc.size:
+        if trc[ind] == 1:
+            ind, lossy_lenghts = count_loss(trace,ind,lossy_lengths)
+        else: ind +=1
+    return lossy_lenghts
 
+loss_lengths = lengths_for_losses(trace,loss_lengths)
 """
 Calculate the mean and standard deviation of the losses lengths in the trace
 """
 mean = np.mean(loss_lengths)
 std = np.std(loss_lengths)
+loss_rate = np.mean(trace)
 
 print(f'Loss lengths mean: {mean}')
 print(f'Standard deviation: {std}')
+print(f'Loss rate: {loss_rate}')
 
 """
 Calculate the change-of-state constant C as the mean + standard deviation of the losses lengths
@@ -71,6 +79,25 @@ Calculate the change-of-state constant C as the mean + standard deviation of the
 c = mean + std
 
 print(f'Change-of-state constant C: {c} \n')
+
+
+samples = [i for i in range(500,trace.size,math.floor((trace.size)/2500))]
+std_deviations = []
+
+for sample_len in samples:
+    losses_lens = []
+    sample = np.array(trace[0:sample_len])
+    std = np.std(sample)
+    std_deviations.append(std)
+#print(f'Standard deviations: {std_deviations}')
+
+plt.plot(samples,std_deviations)
+plt.ylim(-0.05,0.55)
+plt.title('Standard deviations per sample length')
+plt.xlabel('Sample length')
+plt.ylabel('\u03C3')
+plt.show()
+
 
 lossy_trace = np.array([])
 error_free_lengths = []
@@ -319,7 +346,6 @@ def get_conditional_entropy(trc, order):
     sum_0 = np.sum(sum_0_arr)
     sum_1 = np.sum(sum_1_arr)
 
-    # TO-DO: Revisar con casos en los que pueda saber la entropia condicional desde antes (arreglo de puros 1's)
     return -(sum_0+sum_1)
 
 
