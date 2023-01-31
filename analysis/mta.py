@@ -7,8 +7,6 @@ from tabulate import tabulate
 from scipy import stats as st
 import sys
 
-# TO-DO: documentar y readme con instrucciones de ejecución de los experimentos
-# TO-DO: buscar si es que hay alguna actualización de este trabajo
 
 file_name = sys.argv[1]
 
@@ -320,20 +318,19 @@ def get_conditional_entropy(trc, order):
         count = count_appearances(element,trc_splitted)
         appearances[element] = count
     
-    # Ahora debemos buscar las ocurrencias de cada elemento de las permutaciones (que aparezcan)
-    # para definir los factores de la segunda suma
-    # Es decir:
     num_of_ap_fllwd_by_0 = {}
     num_of_ap_fllwd_by_1 = {}
 
     sum_0_arr = np.array([])
     sum_1_arr = np.array([])
 
+    # Count the appearances of each permutation in the trace followed by 0 and by 1
     for k,v in appearances.items():
         if v != 0:
             num_of_ap_fllwd_by_0[k] = count_appearances_followed_by(0,trc_splitted,k)
             num_of_ap_fllwd_by_1[k] = count_appearances_followed_by(1,trc_splitted,k)
 
+            # Calculates the factors of each sum of the formula
             first_factor_fllwd_by_0 = num_of_ap_fllwd_by_0[k]/n_partitions
             second_factor_fllwd_by_0 = np.log2(num_of_ap_fllwd_by_0[k]/v) if num_of_ap_fllwd_by_0[k] != 0 else 0
             sum_0_arr = np.append(sum_0_arr, (first_factor_fllwd_by_0*second_factor_fllwd_by_0))
@@ -350,7 +347,7 @@ def get_conditional_entropy(trc, order):
 
 
 
-# Luego de esto, debemos calcular la entropía para distintos órdenes (vamos a tomar un máximo de 6 porque 2**6 estados como máximo suena razonable)
+# Gets the conditional entropy of the lossy trace for each order (from 1 to 10)
 entropies = {}
 order = 1
 while order < 11:
@@ -370,6 +367,7 @@ plt.show()
 
 dtmc_total = {}
 
+# Calculates the probability tables for the DTMC through frecuency counting
 def get_dtmc(trc, order):
     dtmc = []
     pbb = {}
@@ -389,14 +387,15 @@ def get_dtmc(trc, order):
             dtmc.append(probabilities)
     dtmc_total[order] = dtmc
 
+# Gets the DTMC probabilities of the lossy trace for each order (from 1 to 10)
 order = 1
 while order < 11:
     get_dtmc(lossy_trace,order)
     order += 1
 
+# Writes the DTMC tables to a file
 with open('dtmc_tables.txt','w') as tables:
     for k,v in dtmc_total.items():
-        # Por cada matriz asociada a cada orden, hay que tabular
         col_names = ['State', 'P(i)', 'P(0|i)', 'P(1|i)']
         table = f'Order: {k} \n {tabulate(v,headers=col_names,tablefmt="grid")}\n'
         tables.write(table)
